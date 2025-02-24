@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { User } from "./userModel";
+import { User } from "./userModel.js";
 
 
 const expenseSchema = new   mongoose.Schema({
@@ -30,7 +30,7 @@ default: false
         },
         userId : {
 type:mongoose.Schema.Types.ObjectId,
-ref : "User"
+ref : User
 
         }
 

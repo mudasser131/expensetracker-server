@@ -8,6 +8,9 @@ import cookieParser from 'cookie-parser'
 import connectDB from './database/db.js';
 
 import userRoutes from "./routes/user.routes.js"
+import expenseRoutes from "./routes/expense.routes.js"
+
+
 dotenv.config({});
 
 
@@ -32,6 +35,7 @@ app.use(cors(corsOptions));
 // apis
 
 app.use("/api/v1/user", userRoutes)
+app.use("/api/v1/expense", expenseRoutes)
 
 
 app.get('/', (req, res) =>
