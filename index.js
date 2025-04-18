@@ -11,22 +11,25 @@ dotenv.config();
 const app = express();
 const PORT = 4000;
 
+// CORS configuration - Allow requests from your Netlify frontend
+const corsOptions = {
+  origin: [
+    "http://localhost:5173",  // Local development URL
+    "http://localhost:5174",  // Local development URL (if applicable)
+    "https://expenz05.netlify.app"  // Your deployed frontend on Netlify
+  ],
+  credentials: true,  // Allow cookies/credentials to be included
+};
+
+app.use(cors(corsOptions));  // Use CORS middleware
+
 // middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// CORS configuration - Updated to include Netlify URL
-const corsOptions = {
-  origin: [
-    "http://localhost:5173",  // Local frontend (dev)
-    "http://localhost:5174",  // Local frontend (dev)
-    "https://expenz05.netlify.app"  // Netlify frontend URL
-  ],
-  credentials: true,  // Allow credentials (cookies)
-};
-
-app.use(cors(corsOptions));
+// Allow OPTIONS requests (preflight)
+app.options('*', cors(corsOptions));  // Enable preflight handling for all routes
 
 // Routes
 app.use("/api/v1/user", userRoutes);
