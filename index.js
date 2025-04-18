@@ -21,11 +21,8 @@ const corsOptions = {
   credentials: true, // ✅ Allow cookies/credentials
 };
 
-// ✅ Use CORS middleware with correct options
-app.use(cors(corsOptions));
-
-// ✅ Allow preflight (OPTIONS) requests for all routes
-app.options('*', cors(corsOptions));
+// ✅ Use CORS middleware with correct options for all routes
+app.use(cors(corsOptions)); // This will handle both preflight (OPTIONS) and actual requests
 
 // ✅ Other middlewares
 app.use(express.json());
