@@ -28,6 +28,8 @@ app.use(cors(corsOptions)); // This will handle both preflight (OPTIONS) and act
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.options('*', cors(corsOptions));
+
 
 // ✅ Routes
 app.use("/api/v1/user", userRoutes);
