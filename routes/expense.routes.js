@@ -5,7 +5,7 @@ import isAuthenticated from "../middleware/isAuthenticated.js";
    
 
   router.route('/add').post(isAuthenticated,  addExpense )
-  router.route('/getall').get(isAuthenticated,  getAllExpense )
+  router.route('/getall/:id').get(isAuthenticated,  getAllExpense )
   router.route('/remove/:id').delete(isAuthenticated, removeExpense  )
   router.route('/update/:id').put(isAuthenticated,  updateExpense )
   router.route('/:id/done').put(isAuthenticated,  markAsDoneOrUndone )
