@@ -10,22 +10,35 @@ dotenv.config();
 
 const app = express();
 
-// CORS configuration - allow requests from local and Netlify frontend
+// CORS configuration
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "https://expenz05.netlify.app",
+];
+
 const corsOptions = {
-  origin: [
-    "http://localhost:5173", // Local dev URL
-    "http://localhost:5174", // Optional local dev
-    "https://expenz05.netlify.app", // Deployed Netlify frontend
-  ],
-  credentials: true, // Allow cookies/credentials
-  allowedHeaders: ["Content-Type", "Authorization"], // Explicitly allow headers
+  origin: (origin, callback) => {
+    console.log("CORS Origin:", origin); // Log origin for debugging
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true, // Allow cookies
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
 };
 
-// Use CORS middleware with correct options for all routes
+// Apply CORS middleware first
 app.use(cors(corsOptions));
 
-// Handle preflight OPTIONS requests
-app.options("*", cors(corsOptions));
+// Log preflight requests
+app.options("*", cors(corsOptions), (req, res) => {
+  console.log("Preflight OPTIONS request received for:", req.originalUrl);
+  res.status(204).end();
+});
 
 // Other middlewares
 app.use(express.json());
@@ -34,7 +47,7 @@ app.use(cookieParser());
 
 // Routes
 app.use("/api/v1/user", userRoutes);
-app.use("/api/v1/expense", expenseRoutes); // Ensure expense routes use isAuthenticated middleware
+app.use("/api/v1/expense", expenseRoutes);
 
 // Test route
 app.get("/", (req, res) =>
