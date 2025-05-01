@@ -3,17 +3,17 @@ import mongoose from "mongoose";
 
 export const addExpense = async (req, res) => {
   try {
-    const userId = req.id;
+    const userId = req.userId; // From isAuthenticated middleware
     const { description, amount, category } = req.body;
 
     if (!description || !amount || !category) {
       return res.status(400).json({
-        message: "all fields are required",
+        message: "All fields are required",
         success: false,
       });
     }
 
-    const expense = Expense.create({
+    const expense = await Expense.create({
       description,
       amount,
       category,
@@ -21,56 +21,57 @@ export const addExpense = async (req, res) => {
     });
 
     return res.status(201).json({
-      message: "new expense added",
+      message: "New expense added",
       expense,
       success: true,
     });
   } catch (error) {
-    console.log(error);
+    console.error("Add expense error:", error.message);
+    return res.status(500).json({
+      message: "Server error",
+      success: false,
+    });
   }
 };
 
-export const getAllExpense = async (req, res) => {
+export const getAllExpenses = async (req, res) => {
   try {
-    const userId = req.params.id;
-    let category = req.query.category || ""; // Default to empty string if category is not provided
-    const done = req.query.done || ""; // Default to empty string if done is not provided
+    const userId = req.userId; // From isAuthenticated middleware
+    let { category, done } = req.query; // Optional query params
+    category = category ? category.toLowerCase() : "";
+    done = done ? done.toLowerCase() : "";
 
-    const query = {
-      userId, // Ensures only this user's expenses are fetched
-    };
+    const query = { userId }; // Only fetch user's expenses
 
-    // Handle special case for category "all"
-    if (category.toLowerCase() === "all") {
-      // No need to filter by category
-    } else {
-      // Regular category filter with case-insensitive regex match
-      query.category = { $regex: category, $options: "i" };
+    // Filter by category (skip if empty or "all")
+    if (category && category !== "all") {
+      query.category = { $regex: category, $options: "i" }; // Case-insensitive
     }
 
-    if (done.toLowerCase() === "done") {
-      query.done = true; // Get only completed expenses
-    } else if (done.toLowerCase() === "undone") {
-      query.done = false; // Get only pending expenses
+    // Filter by done status
+    if (done === "done") {
+      query.done = true;
+    } else if (done === "undone") {
+      query.done = false;
     }
 
     const expenses = await Expense.find(query);
 
-    if (expenses.length < 1) {
+    if (expenses.length === 0) {
       return res.status(404).json({
-        message: "No expenses found.",
+        message: "No expenses found",
         success: false,
       });
     }
 
     return res.status(200).json({
-      expenses, // Send found expenses
+      expenses,
       success: true,
     });
   } catch (error) {
-    console.log(error);
+    console.error("Get expenses error:", error.message);
     return res.status(500).json({
-      error: "internal server error",
+      message: "Server error",
       success: false,
     });
   }
@@ -79,72 +80,115 @@ export const getAllExpense = async (req, res) => {
 export const markAsDoneOrUndone = async (req, res) => {
   try {
     const expenseId = req.params.id;
-    const done = req.body;
-    const expense = await Expense.findByIdAndUpdate(expenseId, done, {
-      new: true,
-    });
-    if (!expense) {
-      return res.status(404).json({
-        message: "Expense not found.",
+    const { done } = req.body; // Expect { done: true/false }
+    const userId = req.userId;
+
+    if (typeof done !== "boolean") {
+      return res.status(400).json({
+        message: "Done status must be a boolean",
         success: false,
       });
     }
+
+    const expense = await Expense.findOneAndUpdate(
+      { _id: expenseId, userId }, // Ensure user owns the expense
+      { done },
+      { new: true }
+    );
+
+    if (!expense) {
+      return res.status(404).json({
+        message: "Expense not found or not authorized",
+        success: false,
+      });
+    }
+
     return res.status(200).json({
-      message: `Expense marked as ${expense.done ? "done" : "undone"}.`,
+      message: `Expense marked as ${expense.done ? "done" : "undone"}`,
+      expense,
       success: true,
     });
   } catch (error) {
-    console.log(error);
+    console.error("Mark expense error:", error.message);
+    return res.status(500).json({
+      message: "Server error",
+      success: false,
+    });
   }
 };
 
 export const removeExpense = async (req, res) => {
   try {
     const expenseId = req.params.id;
+    const userId = req.userId;
 
-    await Expense.findByIdAndDelete(expenseId);
+    const expense = await Expense.findOneAndDelete({ _id: expenseId, userId });
 
-    res
-      .status(200)
-      .json({ message: "expense removed", expenseId, success: true });
+    if (!expense) {
+      return res.status(404).json({
+        message: "Expense not found or not authorized",
+        success: false,
+      });
+    }
+
+    return res.status(200).json({
+      message: "Expense removed",
+      expenseId,
+      success: true,
+    });
   } catch (error) {
-    console.log(error);
+    console.error("Delete expense error:", error.message);
+    return res.status(500).json({
+      message: "Server error",
+      success: false,
+    });
   }
 };
 
 export const updateExpense = async (req, res) => {
   try {
-    const { description, amount, category } = req.body;
+    const userId = req.userId;
     const expenseId = req.params.id;
+    const { description, amount, category } = req.body;
 
     // Validate expenseId
     if (!mongoose.Types.ObjectId.isValid(expenseId)) {
-      return res
-        .status(400)
-        .json({ message: "Invalid expense ID", success: false });
+      return res.status(400).json({
+        message: "Invalid expense ID",
+        success: false,
+      });
     }
 
     // Create update object
-    const newData = { description, amount, category };
+    const newData = {};
+    if (description) newData.description = description;
+    if (amount !== undefined) newData.amount = amount;
+    if (category) newData.category = category;
 
     // Update the expense
-    const updatedExpense = await Expense.findByIdAndUpdate(expenseId, newData, {
-      new: true,
-    });
+    const updatedExpense = await Expense.findOneAndUpdate(
+      { _id: expenseId, userId }, // Ensure user owns the expense
+      newData,
+      { new: true }
+    );
 
-    // Check if expense exists
     if (!updatedExpense) {
-      return res
-        .status(404)
-        .json({ message: "Expense not found", success: false });
+      return res.status(404).json({
+        message: "Expense not found or not authorized",
+        success: false,
+      });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "Expense updated successfully",
-      success: true,
       expense: updatedExpense,
+      success: true,
     });
   } catch (error) {
-    console.log(error);
+    console.error("Update expense error:", error.message);
+    return res.status(500).json({
+      message: "Server error",
+      success: false,
+    });
   }
 };

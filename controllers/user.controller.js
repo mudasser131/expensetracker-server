@@ -44,18 +44,20 @@ export const login = async (req, res) => {
     }
 
     const token = jwt.sign({ userId: user._id }, process.env.SECRET_KEY, { expiresIn: "1d" });
+    console.log("Generated token:", token);
 
     return res
       .status(200)
       .cookie("token", token, {
         maxAge: 24 * 60 * 60 * 1000, // 1 day
         httpOnly: true,
-        sameSite: "Strict", // For development use 'Strict', for production with HTTPS use 'None' and `secure: true`
+        sameSite: "None", // Allow cross-origin
+        secure: true, // Required for cross-origin cookies
       })
       .json({
         message: `Welcome back ${user.fullname}`,
         user: { _id: user._id, fullname: user.fullname, email: user.email },
-        token,
+        token, // Optional: keep for debugging, can remove in production
         success: true,
       });
   } catch (error) {
@@ -70,7 +72,8 @@ export const logout = async (req, res) => {
     res.cookie("token", "", {
       maxAge: 0,
       httpOnly: true,
-      sameSite: "Strict",
+      sameSite: "None",
+      secure: true,
     });
     return res.status(200).json({ message: "User logged out successfully", success: true });
   } catch (error) {

@@ -1,49 +1,51 @@
-import express from 'express';
+import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
-import cookieParser from 'cookie-parser';
-import connectDB from './database/db.js';
+import cookieParser from "cookie-parser";
+import connectDB from "./database/db.js";
 import userRoutes from "./routes/user.routes.js";
 import expenseRoutes from "./routes/expense.routes.js";
 
 dotenv.config();
 
 const app = express();
-const PORT = 4000;
 
-// ✅ CORS configuration - allow requests from local and Netlify frontend
+// CORS configuration - allow requests from local and Netlify frontend
 const corsOptions = {
   origin: [
-    "http://localhost:5173",        // Local dev URL
-    "http://localhost:5174",        // Optional local dev
-    "https://expenz05.netlify.app"  // Your deployed Netlify frontend
+    "http://localhost:5173", // Local dev URL
+    "http://localhost:5174", // Optional local dev
+    "https://expenz05.netlify.app", // Deployed Netlify frontend
   ],
-  credentials: true, // ✅ Allow cookies/credentials
+  credentials: true, // Allow cookies/credentials
+  allowedHeaders: ["Content-Type", "Authorization"], // Explicitly allow headers
 };
 
-// ✅ Use CORS middleware with correct options for all routes
-app.use(cors(corsOptions)); // This will handle both preflight (OPTIONS) and actual requests
+// Use CORS middleware with correct options for all routes
+app.use(cors(corsOptions));
 
-// ✅ Other middlewares
+// Handle preflight OPTIONS requests
+app.options("*", cors(corsOptions));
+
+// Other middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.options('*', cors(corsOptions));
 
-
-// ✅ Routes
+// Routes
 app.use("/api/v1/user", userRoutes);
-app.use("/api/v1/expense", expenseRoutes);
+app.use("/api/v1/expense", expenseRoutes); // Ensure expense routes use isAuthenticated middleware
 
-// ✅ Test route
-app.get('/', (req, res) =>
-  res.send(`Node and Express server running on port ${PORT}`)
+// Test route
+app.get("/", (req, res) =>
+  res.send(`Node and Express server running on port ${process.env.PORT || 4000}`)
 );
 
-// ✅ Connect to the database
+// Connect to the database
 connectDB();
 
-// ✅ Start the server
+// Start the server
+const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`Your server is running on port ${PORT}`);
 });
